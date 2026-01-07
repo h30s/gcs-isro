@@ -19,63 +19,73 @@ export const DockingCharge: React.FC<Props> = ({ data }) => {
     const alignment = data.dockingAlignment ?? 0;
 
     return (
-        <div className="bg-mission-panel border border-mission-border p-4 rounded-lg shadow-lg flex flex-col h-full relative overflow-hidden">
-            <h2 className="text-mission-muted text-xs uppercase tracking-widest mb-4 flex items-center gap-2">
+        <div className="bg-mission-panel border border-mission-border p-4 rounded-lg shadow-lg flex flex-col h-full relative overflow-hidden group">
+            <h2 className="text-mission-muted text-xs uppercase tracking-widest mb-4 flex items-center gap-2 shrink-0">
                 <PlugZap size={14} /> Docking & Power
             </h2>
 
-            <div className="flex gap-4">
-                {/* Status Badge */}
-                <div className={clsx("flex-1 p-3 rounded border flex flex-col items-center justify-center gap-1 transition-all duration-500",
-                    isCharging ? "bg-mission-green/10 border-mission-green/50 text-mission-green" :
-                        isDocked ? "bg-mission-cyan/10 border-mission-cyan/50 text-mission-cyan" :
-                            isApproaching ? "bg-mission-amber/10 border-mission-amber/50 text-mission-amber" :
-                                "bg-mission-bg border-mission-border text-mission-muted"
-                )}>
-                    {isCharging ? <RefreshCw className={clsx("mb-1", isCharging && "animate-spin")} size={20} /> :
-                        isDocked ? <Check className="mb-1" size={20} /> :
-                            isApproaching ? <Target className="mb-1 animate-pulse" size={20} /> :
-                                <PlugZap className="mb-1 opacity-50" size={20} />}
-                    <span className="text-xs font-bold uppercase tracking-wider">
-                        {isCharging ? 'CHARGING' : isDocked ? 'DOCKED' : isApproaching ? 'APPROACHING' : 'UNDOCKED'}
-                    </span>
-                    <div className="text-[10px] opacity-70 flex items-center gap-1">
-                        <Target size={10} />
-                        ALIGN: {isDocked ? '100%' : isApproaching ? `${alignment.toFixed(0)}%` : '--'}
+            <div className="flex-1 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-mission-border scrollbar-track-transparent hover:scrollbar-thumb-mission-cyan/50">
+                <div className="flex gap-4 items-stretch h-24 pb-4">
+                    {/* Status Badge */}
+                    <div className={clsx("flex-1 p-3 rounded border flex flex-col items-center justify-center gap-1 transition-all duration-500 relative overflow-hidden",
+                        isCharging ? "bg-mission-green/5 border-mission-green/30 text-mission-green shadow-[0_0_15px_rgba(10,255,0,0.1)]" :
+                            isDocked ? "bg-mission-cyan/5 border-mission-cyan/30 text-mission-cyan" :
+                                isApproaching ? "bg-mission-amber/5 border-mission-amber/30 text-mission-amber" :
+                                    "bg-mission-bg border-mission-border text-mission-muted"
+                    )}>
+                        {isCharging && <div className="absolute inset-0 bg-mission-green/5 animate-pulse" />}
+
+                        {isCharging ? <RefreshCw className={clsx("mb-1 z-10", isCharging && "animate-spin")} size={24} /> :
+                            isDocked ? <Check className="mb-1 z-10" size={24} /> :
+                                isApproaching ? <Target className="mb-1 animate-pulse z-10" size={24} /> :
+                                    <PlugZap className="mb-1 opacity-40 z-10" size={24} />}
+
+                        <span className="text-sm font-bold uppercase tracking-wider z-10">
+                            {isCharging ? 'CHARGING' : isDocked ? 'DOCKED' : isApproaching ? 'APPROACHING' : 'UNDOCKED'}
+                        </span>
+
+                        {(isApproaching || isDocked) && (
+                            <div className="text-[10px] opacity-70 flex items-center gap-1 z-10 font-mono mt-1">
+                                <Target size={10} />
+                                ALIGN: {isDocked ? '100%' : `${alignment.toFixed(0)}%`}
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Current Reading */}
+                    <div className="w-1/3 p-3 rounded border border-mission-border/50 bg-mission-bg/50 flex flex-col justify-center items-center backdrop-blur-sm">
+                        <div className="text-[9px] text-mission-muted uppercase tracking-wider mb-1">Input</div>
+                        <div className="text-2xl font-mono font-bold text-mission-cyan">
+                            {data.chargingCurrent?.toFixed(1) || '0.0'}
+                        </div>
+                        <span className="text-[10px] text-mission-muted font-bold">kW</span>
                     </div>
                 </div>
 
-                {/* Current Reading */}
-                <div className="flex-1 p-3 rounded border border-mission-border bg-mission-bg flex flex-col justify-center">
-                    <div className="text-[10px] text-mission-muted uppercase">Input Current</div>
-                    <div className="text-xl font-mono font-bold text-mission-cyan">
-                        {data.chargingCurrent?.toFixed(1) || '0.0'} <span className="text-xs text-mission-muted">A</span>
+                {/* Charging Graph */}
+                <div className="relative min-h-[100px] border-t border-mission-border/30 pt-2 pb-4">
+                    <div className="absolute inset-0 pt-2 opacity-60">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <AreaChart data={isCharging ? CHARGING_CURVE : []}>
+                                <defs>
+                                    <linearGradient id="colorCurrent" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="5%" stopColor="#0aff00" stopOpacity={0.4} />
+                                        <stop offset="95%" stopColor="#0aff00" stopOpacity={0} />
+                                    </linearGradient>
+                                </defs>
+                                <XAxis dataKey="time" hide />
+                                <YAxis hide domain={[0, 6]} />
+                                <Area type="step" dataKey="current" stroke="#0aff00" strokeWidth={2} fillOpacity={1} fill="url(#colorCurrent)" isAnimationActive={true} />
+                            </AreaChart>
+                        </ResponsiveContainer>
                     </div>
+                    {!isCharging && (
+                        <div className="absolute inset-0 flex flex-col items-center justify-center text-mission-muted/30 gap-2">
+                            <div className="w-full h-px bg-mission-border/30 w-3/4"></div>
+                            <div className="text-[9px] font-mono uppercase tracking-widest">Power Source Disconnected</div>
+                        </div>
+                    )}
                 </div>
-            </div>
-
-            {/* Cool charging Graph */}
-            <div className="flex-1 mt-4 relative min-h-[60px]">
-                <div className="absolute inset-0 opacity-50">
-                    <ResponsiveContainer width="100%" height="100%">
-                        <AreaChart data={isCharging ? CHARGING_CURVE : []}>
-                            <defs>
-                                <linearGradient id="colorCurrent" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="5%" stopColor="#0aff00" stopOpacity={0.3} />
-                                    <stop offset="95%" stopColor="#0aff00" stopOpacity={0} />
-                                </linearGradient>
-                            </defs>
-                            <XAxis dataKey="time" hide />
-                            <YAxis hide domain={[0, 6]} />
-                            <Area type="monotone" dataKey="current" stroke="#0aff00" fillOpacity={1} fill="url(#colorCurrent)" isAnimationActive={false} />
-                        </AreaChart>
-                    </ResponsiveContainer>
-                </div>
-                {!isCharging && (
-                    <div className="absolute inset-0 flex items-center justify-center text-[10px] text-mission-muted font-mono uppercase tracking-widest">
-                        -- No Valid Source --
-                    </div>
-                )}
             </div>
         </div>
     );
