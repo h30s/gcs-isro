@@ -45,14 +45,6 @@ export const TelemetryPanel: React.FC<Props> = ({ data, alerts = [] }) => {
     const signalColor = data.signalStrength < 40 ? '#ff003c' : '#00f0ff';
     const navColor = data.navigationConfidence < 70 ? '#ffaa00' : '#0aff00';
 
-    // Add glow classes based on status
-    const getGlowClass = (val: number, type: 'battery' | 'signal' | 'nav') => {
-        if (type === 'battery' && val < 20) return 'shadow-[0_0_10px_rgba(255,0,60,0.3)]';
-        if (type === 'battery' && val > 80) return 'shadow-[0_0_10px_rgba(10,255,0,0.2)]';
-        if (type === 'signal' && val > 80) return 'shadow-[0_0_10px_rgba(0,240,255,0.2)]';
-        return '';
-    };
-
     const recentAlerts = alerts.slice(0, 3);
 
     return (
