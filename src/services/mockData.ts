@@ -2,7 +2,7 @@ import type { DetectedFeature, TelemetryData } from '../types/mission';
 
 // Initial state
 export const INITIAL_TELEMETRY: TelemetryData = {
-    missionState: 'IDLE',
+    missionState: 'SEARCH',
     sortieNumber: 1,
     missionTime: 0,
     batteryLevel: 100,

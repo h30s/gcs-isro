@@ -1,18 +1,21 @@
-import type { DetectedFeature, TelemetryData } from '../types/mission';
+import type { DetectedFeature, MissionEvent, TelemetryData } from '../types/mission';
 import { generateFeature, INITIAL_TELEMETRY } from './mockData';
 
 type Listener = (data: TelemetryData) => void;
 type FeatureListener = (feature: DetectedFeature) => void;
+type EventListener = (event: MissionEvent) => void;
 
 class MockSocketService {
     private telemetry: TelemetryData = { ...INITIAL_TELEMETRY };
     private listeners: Listener[] = [];
     private featureListeners: FeatureListener[] = [];
+    private eventListeners: EventListener[] = [];
     private intervalId: ReturnType<typeof setInterval> | null = null;
-    // private missionStartTime: number = 0;
+    private missionStartTime: number = Date.now();
 
     connect() {
         if (this.intervalId) return;
+        this.missionStartTime = Date.now();
         this.intervalId = setInterval(() => this.updateLoop(), 1000); // 1Hz update
         console.log('Mock Socket Connected');
     }
@@ -26,25 +29,34 @@ class MockSocketService {
 
     on(event: 'telemetry', callback: Listener): void;
     on(event: 'feature', callback: FeatureListener): void;
+    on(event: 'event', callback: EventListener): void;
     on(event: string, callback: any): void {
         if (event === 'telemetry') {
             this.listeners.push(callback);
         } else if (event === 'feature') {
             this.featureListeners.push(callback);
+        } else if (event === 'event') {
+            this.eventListeners.push(callback);
         }
     }
 
     off(event: 'telemetry', callback: Listener): void;
     off(event: 'feature', callback: FeatureListener): void;
+    off(event: 'event', callback: EventListener): void;
     off(event: string, callback: any): void {
         if (event === 'telemetry') {
             this.listeners = this.listeners.filter(l => l !== callback);
         } else if (event === 'feature') {
             this.featureListeners = this.featureListeners.filter(l => l !== callback);
+        } else if (event === 'event') {
+            this.eventListeners = this.eventListeners.filter(l => l !== callback);
         }
     }
 
     private updateLoop() {
+        // Update mission time
+        this.telemetry.missionTime = Math.floor((Date.now() - this.missionStartTime) / 1000);
+
         // 1. Update Mission State
         this.updateMissionState();
 
@@ -65,9 +77,37 @@ class MockSocketService {
             }
         }
 
-        // 5. Emit
+        // 5. Randomly generate alerts
+        this.generateAlerts();
+
+        // 6. Emit
         this.telemetry.lastUpdate = Date.now();
         this.listeners.forEach(l => l({ ...this.telemetry }));
+    }
+
+    private generateAlerts() {
+        // Low battery warning
+        if (this.telemetry.batteryLevel < 30 && this.telemetry.batteryLevel > 28 && Math.random() > 0.7) {
+            this.emitEvent('WARNING', 'Battery level below 30%');
+        }
+        // Navigation drift alert
+        if (this.telemetry.navigationConfidence < 85 && Math.random() > 0.9) {
+            this.emitEvent('WARNING', 'Navigation confidence degraded');
+        }
+        // Feature validation success
+        if (Math.random() > 0.95) {
+            this.emitEvent('SUCCESS', 'Feature validated and logged');
+        }
+    }
+
+    private emitEvent(type: MissionEvent['type'], message: string) {
+        const event: MissionEvent = {
+            id: `evt-${Date.now()}`,
+            timestamp: Date.now(),
+            type,
+            message,
+        };
+        this.eventListeners.forEach(l => l(event));
     }
 
     private updateMissionState() {
@@ -81,11 +121,21 @@ class MockSocketService {
         else if (this.telemetry.missionState === 'DETECT' && Math.random() > 0.7) this.telemetry.missionState = 'SEARCH';
         else if (this.telemetry.missionState === 'RETURN' && this.telemetry.uavPosition.x < 0.5) {
             this.telemetry.missionState = 'DOCKED';
+            this.telemetry.dockingAlignment = 100;
         }
         else if (this.telemetry.missionState === 'DOCKED') this.telemetry.missionState = 'CHARGING';
         else if (this.telemetry.missionState === 'CHARGING' && this.telemetry.batteryLevel > 95) {
             this.telemetry.missionState = 'IDLE';
             this.telemetry.sortieNumber++;
+            this.telemetry.dockingAlignment = undefined;
+        }
+
+        // Simulate docking alignment during RETURN
+        if (this.telemetry.missionState === 'RETURN') {
+            const distance = Math.sqrt(
+                this.telemetry.uavPosition.x ** 2 + this.telemetry.uavPosition.y ** 2
+            );
+            this.telemetry.dockingAlignment = Math.max(0, Math.min(100, 100 - distance * 10));
         }
     }
 

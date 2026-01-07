@@ -1,12 +1,13 @@
 import React, { useRef, useEffect } from 'react';
 import { Map as MapIcon } from 'lucide-react';
-import type { TelemetryData } from '../../types/mission';
+import type { TelemetryData, DetectedFeature } from '../../types/mission';
 
 interface Props {
     data: TelemetryData;
+    features?: DetectedFeature[];
 }
 
-export const ArenaMap: React.FC<Props> = ({ data }) => {
+export const ArenaMap: React.FC<Props> = ({ data, features = [] }) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
 
     // Arena config (meters)
@@ -47,13 +48,45 @@ export const ArenaMap: React.FC<Props> = ({ data }) => {
             ctx.stroke();
         }
 
-        // Origin
+        // Draw detected features
+        features.forEach(feat => {
+            const fx = cx + feat.position.x * scale;
+            const fy = cy - feat.position.y * scale;
+
+            // Color by type
+            let color = '#888888'; // rock
+            if (feat.type === 'oxide') color = '#ff3333';
+            else if (feat.type === 'ice') color = '#00f0ff';
+
+            // Outer glow
+            ctx.beginPath();
+            ctx.fillStyle = color.replace(')', ', 0.3)').replace('rgb', 'rgba').replace('#', 'rgba(');
+            ctx.arc(fx, fy, 8, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Inner dot
+            ctx.beginPath();
+            ctx.fillStyle = color;
+            ctx.arc(fx, fy, 4, 0, Math.PI * 2);
+            ctx.fill();
+        });
+
+        // Origin (Base Station)
         ctx.fillStyle = '#0aff00';
         ctx.beginPath();
-        ctx.arc(cx, cy, 4, 0, Math.PI * 2);
+        ctx.arc(cx, cy, 6, 0, Math.PI * 2);
         ctx.fill();
-        ctx.fillStyle = 'rgba(10, 255, 0, 0.5)';
-        ctx.fillText("BASE (0,0)", cx + 8, cy + 4);
+
+        // Base station ring
+        ctx.strokeStyle = 'rgba(10, 255, 0, 0.3)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(cx, cy, 10, 0, Math.PI * 2);
+        ctx.stroke();
+
+        ctx.fillStyle = 'rgba(10, 255, 0, 0.7)';
+        ctx.font = '10px monospace';
+        ctx.fillText("BASE", cx + 14, cy + 4);
 
         // Path
         if (data.currentPath.length > 1) {
@@ -73,13 +106,14 @@ export const ArenaMap: React.FC<Props> = ({ data }) => {
         const uavX = cx + data.uavPosition.x * scale;
         const uavY = cy - data.uavPosition.y * scale;
 
-        // Pulse
+        // Pulse ring
         ctx.beginPath();
-        ctx.fillStyle = 'rgba(0, 240, 255, 0.2)';
-        ctx.arc(uavX, uavY, 15, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.strokeStyle = 'rgba(0, 240, 255, 0.4)';
+        ctx.lineWidth = 2;
+        ctx.arc(uavX, uavY, 12, 0, Math.PI * 2);
+        ctx.stroke();
 
-        // Drone
+        // Drone dot
         ctx.fillStyle = '#00f0ff';
         ctx.beginPath();
         ctx.arc(uavX, uavY, 6, 0, Math.PI * 2);
@@ -88,9 +122,9 @@ export const ArenaMap: React.FC<Props> = ({ data }) => {
         // Label
         ctx.fillStyle = '#00f0ff';
         ctx.font = '10px monospace';
-        ctx.fillText(`${data.uavPosition.x.toFixed(1)}, ${data.uavPosition.y.toFixed(1)}`, uavX + 10, uavY - 10);
+        ctx.fillText(`${data.uavPosition.x.toFixed(1)}, ${data.uavPosition.y.toFixed(1)}`, uavX + 12, uavY - 12);
 
-    }, [data]);
+    }, [data, features]);
 
     return (
         <div className="bg-mission-panel border border-mission-border p-4 rounded-lg shadow-lg flex flex-col h-full relative overflow-hidden">
@@ -100,7 +134,7 @@ export const ArenaMap: React.FC<Props> = ({ data }) => {
                 </h2>
             </div>
 
-            <div className="flex-1 flex items-center justify-center bg-[#050505] rounded border border-mission-border/30 overflow-hidden relative">
+            <div className="flex-1 flex items-center justify-center bg-[#050505] rounded border border-mission-border/30 overflow-hidden relative mt-8">
                 <canvas
                     ref={canvasRef}
                     width={600}
@@ -109,6 +143,16 @@ export const ArenaMap: React.FC<Props> = ({ data }) => {
                 />
                 <div className="absolute bottom-2 right-2 text-xs text-mission-muted font-mono bg-black/50 px-2 py-1 rounded">
                     Scale: 1m/grid • Base Frame
+                </div>
+                <div className="absolute bottom-2 left-2 flex gap-2">
+                    {['oxide', 'ice', 'rock'].map(type => (
+                        <div key={type} className="flex items-center gap-1 text-[9px] uppercase bg-black/50 px-1.5 py-0.5 rounded">
+                            <div className={`w-2 h-2 rounded-full ${type === 'oxide' ? 'bg-[#ff3333]' :
+                                    type === 'ice' ? 'bg-[#00f0ff]' : 'bg-[#888888]'
+                                }`} />
+                            <span className="text-mission-muted">{type}</span>
+                        </div>
+                    ))}
                 </div>
             </div>
         </div>

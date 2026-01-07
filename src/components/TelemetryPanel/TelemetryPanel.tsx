@@ -1,9 +1,11 @@
-import { Battery, Signal, Zap, Navigation } from 'lucide-react';
+import { Battery, Signal, Zap, Navigation, AlertTriangle, CheckCircle2, Info, XCircle } from 'lucide-react';
 import { RadialBarChart, RadialBar, ResponsiveContainer, PolarAngleAxis } from 'recharts';
-import type { TelemetryData } from '../../types/mission';
+import type { MissionEvent, TelemetryData } from '../../types/mission';
+import clsx from 'clsx';
 
 interface Props {
     data: TelemetryData;
+    alerts?: MissionEvent[];
 }
 
 const CircularGauge = ({ value, color, label, icon: Icon }: { value: number, color: string, label: string, icon: any }) => {
@@ -26,11 +28,22 @@ const CircularGauge = ({ value, color, label, icon: Icon }: { value: number, col
     );
 };
 
-export const TelemetryPanel: React.FC<Props> = ({ data }) => {
+const AlertIcon = ({ type }: { type: MissionEvent['type'] }) => {
+    switch (type) {
+        case 'CRITICAL': return <XCircle size={12} className="text-mission-alert" />;
+        case 'WARNING': return <AlertTriangle size={12} className="text-mission-amber" />;
+        case 'SUCCESS': return <CheckCircle2 size={12} className="text-mission-green" />;
+        default: return <Info size={12} className="text-mission-cyan" />;
+    }
+};
+
+export const TelemetryPanel: React.FC<Props> = ({ data, alerts = [] }) => {
     // Determine colors based on thresholds
     const batteryColor = data.batteryLevel < 20 ? '#ff003c' : data.batteryLevel < 50 ? '#ffaa00' : '#0aff00';
     const signalColor = data.signalStrength < 40 ? '#ff003c' : '#00f0ff';
     const navColor = data.navigationConfidence < 70 ? '#ffaa00' : '#0aff00';
+
+    const recentAlerts = alerts.slice(0, 3);
 
     return (
         <div className="bg-mission-panel border border-mission-border p-4 rounded-lg shadow-lg flex flex-col h-full">
@@ -45,14 +58,39 @@ export const TelemetryPanel: React.FC<Props> = ({ data }) => {
                 <CircularGauge value={data.computeHealth} color="#00f0ff" label="Compute" icon={Zap} />
             </div>
 
-            <div className="mt-4 pt-4 border-t border-mission-border/50 grid grid-cols-2 gap-4 text-xs font-mono text-mission-muted">
-                <div className="flex justify-between">
-                    <span>UAV V_Batt:</span>
-                    <span className="text-mission-text">{(data.batteryLevel * 0.12 + 10).toFixed(1)}V</span>
+            <div className="mt-4 pt-3 border-t border-mission-border/50 grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                    <div className="flex justify-between text-xs font-mono text-mission-muted">
+                        <span>UAV V_Batt:</span>
+                        <span className="text-mission-text">{(data.batteryLevel * 0.12 + 10).toFixed(1)}V</span>
+                    </div>
+                    <div className="flex justify-between text-xs font-mono text-mission-muted">
+                        <span>Temp:</span>
+                        <span className="text-mission-text">42°C</span>
+                    </div>
                 </div>
-                <div className="flex justify-between">
-                    <span>Temp:</span>
-                    <span className="text-mission-text">42°C</span>
+
+                {/* Alerts Section */}
+                <div className="space-y-1">
+                    <div className="text-[9px] uppercase text-mission-muted tracking-wider flex items-center gap-1">
+                        <AlertTriangle size={10} /> Alerts
+                    </div>
+                    {recentAlerts.length === 0 ? (
+                        <div className="text-[10px] text-mission-muted/50 font-mono">No active alerts</div>
+                    ) : (
+                        recentAlerts.map(alert => (
+                            <div key={alert.id} className={clsx(
+                                "flex items-center gap-1.5 text-[10px] font-mono px-1.5 py-0.5 rounded",
+                                alert.type === 'CRITICAL' && "bg-mission-alert/10 text-mission-alert",
+                                alert.type === 'WARNING' && "bg-mission-amber/10 text-mission-amber",
+                                alert.type === 'SUCCESS' && "bg-mission-green/10 text-mission-green",
+                                alert.type === 'INFO' && "bg-mission-cyan/10 text-mission-cyan"
+                            )}>
+                                <AlertIcon type={alert.type} />
+                                <span className="truncate">{alert.message}</span>
+                            </div>
+                        ))
+                    )}
                 </div>
             </div>
         </div>

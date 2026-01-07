@@ -1,8 +1,8 @@
 import { Canvas, useFrame } from '@react-three/fiber';
 import { OrbitControls, Stars, Grid } from '@react-three/drei';
-import { useRef, useMemo } from 'react';
+import { useRef, useMemo, useState } from 'react';
 import * as THREE from 'three';
-import { Cuboid } from 'lucide-react';
+import { Cuboid, Filter, FilterX } from 'lucide-react';
 import clsx from 'clsx';
 import type { DetectedFeature, FeatureType } from '../../types/mission';
 
@@ -39,12 +39,34 @@ const Point = ({ position, type }: { position: [number, number, number], type: F
 
 
 export const PointCloud3D: React.FC<Props> = ({ features }) => {
+    const [showValidatedOnly, setShowValidatedOnly] = useState(false);
+
+    const filteredFeatures = useMemo(() => {
+        return showValidatedOnly ? features.filter(f => f.status === 'valid') : features;
+    }, [features, showValidatedOnly]);
+
     return (
         <div className="bg-mission-panel border border-mission-border p-0 rounded-lg shadow-lg flex flex-col h-full relative overflow-hidden">
             <div className="absolute top-4 left-4 z-10 pointer-events-none">
                 <h2 className="text-mission-muted text-xs uppercase tracking-widest flex items-center gap-2 bg-black/50 px-2 py-1 rounded backdrop-blur-sm">
                     <Cuboid size={14} /> 3D Point Cloud Scanner
                 </h2>
+            </div>
+
+            {/* Toggle Button */}
+            <div className="absolute top-4 right-4 z-10">
+                <button
+                    onClick={() => setShowValidatedOnly(!showValidatedOnly)}
+                    className={clsx(
+                        "flex items-center gap-1.5 text-[10px] uppercase font-bold px-2 py-1 rounded border transition-all duration-200",
+                        showValidatedOnly
+                            ? "bg-mission-green/20 border-mission-green/50 text-mission-green"
+                            : "bg-black/50 border-mission-border text-mission-muted hover:border-mission-cyan/50 hover:text-mission-cyan"
+                    )}
+                >
+                    {showValidatedOnly ? <Filter size={12} /> : <FilterX size={12} />}
+                    {showValidatedOnly ? 'Validated' : 'Raw Scan'}
+                </button>
             </div>
 
             <div className="w-full h-full bg-[#020202]">
@@ -64,16 +86,14 @@ export const PointCloud3D: React.FC<Props> = ({ features }) => {
                     </mesh>
 
                     {/* Features */}
-                    {features.map((f) => (
+                    {filteredFeatures.map((f) => (
                         <Point
                             key={f.id}
-                            position={[f.position.x, f.position.z, f.position.y]} // Map coordinates appropriately (Z up in 3D usually Y up in ThreeJS)
+                            position={[f.position.x, f.position.z, f.position.y]}
                             type={f.type}
                             confidence={f.confidence}
                         />
                     ))}
-
-                    {/* Placeholder for real-time UAV position could be passed in props too */}
 
                 </Canvas>
             </div>
@@ -88,6 +108,11 @@ export const PointCloud3D: React.FC<Props> = ({ features }) => {
                         <span className="text-mission-muted">{type}</span>
                     </div>
                 ))}
+            </div>
+
+            {/* Feature count indicator */}
+            <div className="absolute bottom-4 right-4 z-10 text-[10px] font-mono text-mission-muted bg-black/50 px-2 py-1 rounded">
+                {filteredFeatures.length} pts
             </div>
         </div>
     );

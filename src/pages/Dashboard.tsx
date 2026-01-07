@@ -10,7 +10,7 @@ import { Rocket, Wifi, WifiOff } from 'lucide-react';
 import clsx from 'clsx';
 
 export const Dashboard = () => {
-    const { telemetry, recentFeatures, isConnected } = useMissionData();
+    const { telemetry, recentFeatures, alerts, isConnected } = useMissionData();
 
     return (
         <div className="flex flex-col h-screen text-mission-text bg-mission-bg p-2 gap-2 overflow-hidden selection:bg-mission-cyan selection:text-black">
@@ -47,7 +47,7 @@ export const Dashboard = () => {
             {/* MAIN GRID */}
             <main className="flex-1 grid grid-cols-12 grid-rows-12 gap-2 min-h-0">
 
-                {/* TOP ROW: STATUS & TELEMETRY (H: 2) */}
+                {/* TOP ROW: STATUS & TELEMETRY */}
                 <div className="col-span-12 lg:col-span-3 row-span-3 lg:row-span-3">
                     <MissionStatus
                         state={telemetry.missionState}
@@ -57,17 +57,16 @@ export const Dashboard = () => {
                     />
                 </div>
                 <div className="col-span-12 lg:col-span-9 row-span-3 lg:row-span-3">
-                    <TelemetryPanel data={telemetry} />
+                    <TelemetryPanel data={telemetry} alerts={alerts} />
                 </div>
 
                 {/* MIDDLE: MAP & 3D & IMAGES */}
-                {/* Map */}
                 <div className="col-span-12 lg:col-span-4 row-span-6">
-                    <ArenaMap data={telemetry} />
+                    <ArenaMap data={telemetry} features={recentFeatures} />
                 </div>
 
                 {/* 3D Viewer - Centerpiece */}
-                <div className="col-span-12 lg:col-span-4 row-span-6 relative group">
+                <div className="col-span-12 lg:col-span-4 row-span-6 relative group overflow-hidden">
                     <PointCloud3D features={recentFeatures} />
                     <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity text-[10px] text-mission-muted bg-black/80 px-2 rounded pointer-events-none">
                         Mouse: Rotate • Scroll: Zoom

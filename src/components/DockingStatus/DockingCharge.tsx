@@ -1,4 +1,4 @@
-import { PlugZap, Check, RefreshCw } from 'lucide-react';
+import { PlugZap, Check, RefreshCw, Target } from 'lucide-react';
 import type { TelemetryData } from '../../types/mission';
 import clsx from 'clsx';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis } from 'recharts';
@@ -15,6 +15,8 @@ const CHARGING_CURVE = Array.from({ length: 20 }, (_, i) => ({
 export const DockingCharge: React.FC<Props> = ({ data }) => {
     const isDocked = data.missionState === 'DOCKED' || data.missionState === 'CHARGING';
     const isCharging = data.missionState === 'CHARGING';
+    const isApproaching = data.missionState === 'RETURN';
+    const alignment = data.dockingAlignment ?? 0;
 
     return (
         <div className="bg-mission-panel border border-mission-border p-4 rounded-lg shadow-lg flex flex-col h-full relative overflow-hidden">
@@ -25,13 +27,22 @@ export const DockingCharge: React.FC<Props> = ({ data }) => {
             <div className="flex gap-4">
                 {/* Status Badge */}
                 <div className={clsx("flex-1 p-3 rounded border flex flex-col items-center justify-center gap-1 transition-all duration-500",
-                    isDocked ? "bg-mission-green/10 border-mission-green/50 text-mission-green" : "bg-mission-bg border-mission-border text-mission-muted"
+                    isCharging ? "bg-mission-green/10 border-mission-green/50 text-mission-green" :
+                        isDocked ? "bg-mission-cyan/10 border-mission-cyan/50 text-mission-cyan" :
+                            isApproaching ? "bg-mission-amber/10 border-mission-amber/50 text-mission-amber" :
+                                "bg-mission-bg border-mission-border text-mission-muted"
                 )}>
-                    {isCharging ? <RefreshCw className={clsx("mb-1", isCharging && "animate-spin")} /> : <Check className="mb-1" />}
+                    {isCharging ? <RefreshCw className={clsx("mb-1", isCharging && "animate-spin")} size={20} /> :
+                        isDocked ? <Check className="mb-1" size={20} /> :
+                            isApproaching ? <Target className="mb-1 animate-pulse" size={20} /> :
+                                <PlugZap className="mb-1 opacity-50" size={20} />}
                     <span className="text-xs font-bold uppercase tracking-wider">
-                        {isCharging ? 'CHARGING' : isDocked ? 'DOCKED' : 'UNDOCKED'}
+                        {isCharging ? 'CHARGING' : isDocked ? 'DOCKED' : isApproaching ? 'APPROACHING' : 'UNDOCKED'}
                     </span>
-                    <div className="text-[10px] opacity-70">ALIGNMENT: {isDocked ? '100%' : '--'}</div>
+                    <div className="text-[10px] opacity-70 flex items-center gap-1">
+                        <Target size={10} />
+                        ALIGN: {isDocked ? '100%' : isApproaching ? `${alignment.toFixed(0)}%` : '--'}
+                    </div>
                 </div>
 
                 {/* Current Reading */}
